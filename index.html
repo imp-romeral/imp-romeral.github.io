@@ -125,15 +125,9 @@
       return;
     }
     carga.classList.remove('oculto');
-    // La pantalla de inicio se queda hasta que la app avisa que terminó de cargar los datos.
-    // Si ese aviso no llega (una versión antigua del script), se quita 12 segundos después de abrir la página.
-    app.addEventListener('load', () => setTimeout(quitarCarga, 12000), { once: true });
+    // La pantalla de inicio se quita cuando la app avisa que terminó de cargar, o a los 4 segundos como máximo
+    setTimeout(quitarCarga, 4000);
     app.src = URL_APP;
-    // Si Google tarda mucho (o pide iniciar sesión, que no se puede mostrar dentro de la app), se ofrece abrirla en el navegador
-    setTimeout(() => {
-      if (carga.classList.contains('oculto')) return;
-      mostrarLento('Está tardando más de lo normal.<br><br><a class="boton" href="' + URL_APP + '" target="_blank" rel="noopener">Abrir en el navegador</a>');
-    }, 25000);
   }
   window.addEventListener('online', () => { if (!app.src) location.reload(); });
   // Aviso de la app (App.html): sólo se acepta desde las páginas de Apps Script
