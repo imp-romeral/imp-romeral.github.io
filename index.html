@@ -24,17 +24,41 @@
   #app { flex: 1; width: 100%; border: 0; display: block; background: var(--fondo); }
   .oculto { display: none !important; }
 
-  /* Pantalla de carga con el símbolo de la iglesia */
+  /* Pantalla de inicio: azul de la iglesia, símbolo en blanco y nombre. Sigue sin corte al inicio que muestra el celular */
   #carga {
-    position: fixed; inset: 0; z-index: 5; background: #fff;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px;
+    position: fixed; inset: 0; z-index: 5; overflow: hidden; color: #fff; text-align: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px;
+    background: radial-gradient(120% 80% at 50% 38%, #0f5a80 0%, #0b4d6f 30%, #062a43 72%, #041d2f 100%);
+    transition: opacity .55s ease, visibility .55s;
   }
-  #carga img { width: 132px; height: 132px; }
-  #carga b { font-size: 17px; color: var(--azul); }
-  #carga span { font-size: 13px; color: #5c6670; }
-  .rueda { width: 28px; height: 28px; border: 3px solid #dbe6ec; border-top-color: var(--azul2); border-radius: 50%; animation: gira .9s linear infinite; }
-  @keyframes gira { to { transform: rotate(360deg); } }
-  #lento { font-size: 13px; color: #5c6670; max-width: 300px; line-height: 1.45; }
+  #carga.oculto { display: flex !important; opacity: 0; visibility: hidden; pointer-events: none; }
+  /* Halo suave detrás del símbolo */
+  #carga::before {
+    content: ""; position: absolute; width: 340px; height: 340px; left: 50%; top: 38%; transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(246, 221, 142, .16) 0%, rgba(246, 221, 142, 0) 65%); pointer-events: none;
+  }
+  .ini { position: relative; display: flex; flex-direction: column; align-items: center; }
+  .ini img { width: 148px; height: 148px; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .35)); animation: aparece 1s ease-out both; }
+  .ini small {
+    margin-top: 22px; font-size: 11.5px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: #cfe3ee;
+    animation: sube .9s .25s ease-out both;
+  }
+  .ini h1 {
+    margin: 4px 0 0; font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: 44px; line-height: 1.1; letter-spacing: .5px;
+    animation: sube .9s .4s ease-out both;
+  }
+  .ini .linea { width: 56px; height: 2px; margin: 16px 0 12px; background: #e0b84c; border-radius: 2px; animation: sube .9s .55s ease-out both; }
+  .ini em { font-style: normal; font-size: 13px; color: #d9e8f0; animation: sube .9s .65s ease-out both; }
+  /* Barra de avance fina y dorada al pie */
+  .avance { position: absolute; left: 50%; bottom: calc(48px + env(safe-area-inset-bottom)); width: 120px; height: 3px; margin-left: -60px; border-radius: 3px; background: rgba(255, 255, 255, .14); overflow: hidden; }
+  .avance i { position: absolute; top: 0; bottom: 0; width: 40%; border-radius: 3px; background: #e0b84c; animation: corre 1.3s ease-in-out infinite; }
+  @keyframes aparece { from { opacity: 0; transform: scale(.88); } to { opacity: 1; transform: none; } }
+  @keyframes sube { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes corre { from { left: -40%; } to { left: 100%; } }
+  @media (prefers-reduced-motion: reduce) { #carga *, #carga { animation: none !important; transition: none !important; } }
+  #cargaTxt:empty { display: none; }
+  #cargaTxt { margin-top: 18px; font-size: 13.5px; color: #fff; }
+  #lento { margin-top: 12px; font-size: 13px; color: #d9e8f0; max-width: 300px; line-height: 1.45; position: relative; }
   .boton {
     display: inline-block; border: 0; border-radius: 10px; padding: 10px 16px; font: inherit; font-size: 14px; font-weight: 700;
     background: var(--azul2); color: #fff; text-decoration: none; cursor: pointer;
@@ -61,11 +85,16 @@
   <iframe id="app" title="Iglesia Metodista Pentecostal Romeral" allow="clipboard-write; fullscreen"></iframe>
 
   <div id="carga" aria-live="polite">
-    <img src="iconos/icono-512.png" alt="Iglesia Metodista Pentecostal Romeral">
-    <b>Iglesia Metodista Pentecostal Romeral</b>
-    <div class="rueda" id="rueda" aria-hidden="true"></div>
-    <span id="cargaTxt">Abriendo la app…</span>
-    <div id="lento" class="oculto"></div>
+    <div class="ini">
+      <img src="iconos/simbolo-blanco.png" alt="">
+      <small>Iglesia Metodista Pentecostal</small>
+      <h1>Romeral</h1>
+      <div class="linea" aria-hidden="true"></div>
+      <em>Control de culto y actividades</em>
+      <span id="cargaTxt"></span>
+      <div id="lento" class="oculto"></div>
+    </div>
+    <div class="avance" id="rueda" aria-hidden="true"><i></i></div>
   </div>
 
 <script>
@@ -96,7 +125,9 @@
       return;
     }
     carga.classList.remove('oculto');
-    app.addEventListener('load', () => setTimeout(quitarCarga, 250), { once: true });
+    // La pantalla de inicio se queda hasta que la app avisa que terminó de cargar los datos.
+    // Si ese aviso no llega (una versión antigua del script), se quita 12 segundos después de abrir la página.
+    app.addEventListener('load', () => setTimeout(quitarCarga, 12000), { once: true });
     app.src = URL_APP;
     // Si Google tarda mucho (o pide iniciar sesión, que no se puede mostrar dentro de la app), se ofrece abrirla en el navegador
     setTimeout(() => {
@@ -105,6 +136,12 @@
     }, 25000);
   }
   window.addEventListener('online', () => { if (!app.src) location.reload(); });
+  // Aviso de la app (App.html): sólo se acepta desde las páginas de Apps Script
+  window.addEventListener('message', e => {
+    let origen = '';
+    try { origen = new URL(e.origin).hostname; } catch (x) {}
+    if (e.data === 'romeral-lista' && /\.googleusercontent\.com$/.test(origen)) quitarCarga();
+  });
 
   /* Aviso para instalar: Android muestra el botón Instalar; iPhone necesita el menú Compartir de Safari */
   const instalada = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
