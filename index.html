@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IMP Romeral</title>
+<meta name="description" content="Control de culto y actividades · Iglesia Metodista Pentecostal Romeral">
+<meta name="theme-color" content="#062a43">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="iconos/favicon-48.png">
+<link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IMP Romeral">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root { --azul: #062a43; --azul2: #0b4d6f; --fondo: #f3f3f1; --texto: #1c2630; }
+  html, body { margin: 0; height: 100%; background: var(--azul); }
+  body {
+    display: flex; flex-direction: column; box-sizing: border-box;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--texto);
+  }
+  #app { flex: 1; width: 100%; border: 0; display: block; background: var(--fondo); }
+  .oculto { display: none !important; }
+
+  /* Pantalla de carga con el símbolo de la iglesia */
+  #carga {
+    position: fixed; inset: 0; z-index: 5; background: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px;
+  }
+  #carga img { width: 132px; height: 132px; }
+  #carga b { font-size: 17px; color: var(--azul); }
+  #carga span { font-size: 13px; color: #5c6670; }
+  .rueda { width: 28px; height: 28px; border: 3px solid #dbe6ec; border-top-color: var(--azul2); border-radius: 50%; animation: gira .9s linear infinite; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+  #lento { font-size: 13px; color: #5c6670; max-width: 300px; line-height: 1.45; }
+  .boton {
+    display: inline-block; border: 0; border-radius: 10px; padding: 10px 16px; font: inherit; font-size: 14px; font-weight: 700;
+    background: var(--azul2); color: #fff; text-decoration: none; cursor: pointer;
+  }
+  .boton.claro { background: #fff; color: var(--azul); }
+
+  /* Aviso para instalar la app (sólo en el navegador, no dentro de la app instalada) */
+  #instalar {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--azul); color: #fff; font-size: 13px; line-height: 1.35;
+  }
+  #instalar img { width: 34px; height: 34px; border-radius: 8px; background: #fff; flex: none; }
+  #instalar span { flex: 1; min-width: 0; }
+  #instalar .x { flex: none; border: 0; background: transparent; color: #fff; font-size: 22px; line-height: 1; cursor: pointer; padding: 2px 6px; }
+</style>
+</head>
+<body>
+  <div id="instalar" class="oculto" role="region" aria-label="Instalar la app">
+    <img src="iconos/icono-192.png" alt="">
+    <span id="instalarTxt"></span>
+    <button type="button" id="instalarBtn" class="boton claro oculto">Instalar</button>
+    <button type="button" class="x" id="instalarX" aria-label="Cerrar aviso">×</button>
+  </div>
+
+  <iframe id="app" title="Iglesia Metodista Pentecostal Romeral" allow="clipboard-write; fullscreen"></iframe>
+
+  <div id="carga" aria-live="polite">
+    <img src="iconos/icono-512.png" alt="Iglesia Metodista Pentecostal Romeral">
+    <b>Iglesia Metodista Pentecostal Romeral</b>
+    <div class="rueda" id="rueda" aria-hidden="true"></div>
+    <span id="cargaTxt">Abriendo la app…</span>
+    <div id="lento" class="oculto"></div>
+  </div>
+
+<script>
+  /* ============================================================
+     ÚNICO DATO A COMPLETAR: el link de la app publicada en Apps Script
+     (Gestionar implementaciones → copiar la "URL de la aplicación web", termina en /exec)
+     ============================================================ */
+  const URL_APP = 'https://script.google.com/macros/s/AKfycbyMci91qjgsOp6WHFYzZWaO2W-YzAvHkKFbIdKKaTu4OvGkr0ezjBe0-ooysKE1bAhz/exec';
+
+  const $ = id => document.getElementById(id);
+  const app = $('app'), carga = $('carga');
+  const configurado = /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec/.test(URL_APP);
+
+  function mostrarLento(html) { $('lento').innerHTML = html; $('lento').classList.remove('oculto'); }
+  function quitarCarga() { carga.classList.add('oculto'); }
+
+  function abrir() {
+    if (!configurado) {
+      $('rueda').classList.add('oculto');
+      $('cargaTxt').textContent = 'Falta poner el link de la app.';
+      mostrarLento('Escriba el link de Apps Script (termina en /exec) en la línea URL_APP de este archivo.');
+      return;
+    }
+    if (!navigator.onLine) {
+      $('rueda').classList.add('oculto');
+      $('cargaTxt').textContent = 'Sin conexión a internet.';
+      mostrarLento('<button type="button" class="boton" onclick="location.reload()">Volver a intentar</button>');
+      return;
+    }
+    carga.classList.remove('oculto');
+    app.addEventListener('load', () => setTimeout(quitarCarga, 250), { once: true });
+    app.src = URL_APP;
+    // Si Google tarda mucho (o pide iniciar sesión, que no se puede mostrar dentro de la app), se ofrece abrirla en el navegador
+    setTimeout(() => {
+      if (carga.classList.contains('oculto')) return;
+      mostrarLento('Está tardando más de lo normal.<br><br><a class="boton" href="' + URL_APP + '" target="_blank" rel="noopener">Abrir en el navegador</a>');
+    }, 25000);
+  }
+  window.addEventListener('online', () => { if (!app.src) location.reload(); });
+
+  /* Aviso para instalar: Android muestra el botón Instalar; iPhone necesita el menú Compartir de Safari */
+  const instalada = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let cerrado = false;
+  try { cerrado = localStorage.getItem('romeral_instalar_cerrado') === '1'; } catch (e) {}
+  let pedido = null;
+  function avisar(texto, conBoton) {
+    if (instalada || cerrado) return;
+    $('instalarTxt').textContent = texto;
+    $('instalarBtn').classList.toggle('oculto', !conBoton);
+    $('instalar').classList.remove('oculto');
+  }
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedido = e; avisar('Instale la app de la iglesia en su celular.', true); });
+  $('instalarBtn').addEventListener('click', async () => {
+    if (!pedido) return;
+    pedido.prompt();
+    try { await pedido.userChoice; } catch (e) {}
+    pedido = null; $('instalar').classList.add('oculto');
+  });
+  $('instalarX').addEventListener('click', () => {
+    $('instalar').classList.add('oculto');
+    try { localStorage.setItem('romeral_instalar_cerrado', '1'); } catch (e) {}
+  });
+  window.addEventListener('appinstalled', () => $('instalar').classList.add('oculto'));
+  if (esIOS) avisar('Para instalarla: pulse Compartir y luego «Agregar a inicio».', false);
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  abrir();
+</script>
+</body>
+</html>
