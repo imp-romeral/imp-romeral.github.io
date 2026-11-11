@@ -5,17 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>IMP Romeral</title>
 <meta name="description" content="Control de culto y actividades · Iglesia Metodista Pentecostal Romeral">
-<meta name="theme-color" content="#062a43">
+<meta name="theme-color" content="#f7eef1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="iconos/favicon-48.png">
 <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="IMP Romeral">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
-  :root { --azul: #062a43; --azul2: #0b4d6f; --fondo: #f3f3f1; --texto: #1c2630; }
-  html, body { margin: 0; height: 100%; background: var(--azul); }
+  /* Colores del logo: rosa, crema, lila y menta */
+  :root { --azul: #062a43; --azul2: #0b4d6f; --fondo: #f3f3f1; --texto: #1c2630; --rosa: #b98393; --rosa2: #8c5d6c; --crema: #f7eef1; }
+  html, body { margin: 0; height: 100%; background: var(--crema); }
   body {
     display: flex; flex-direction: column; box-sizing: border-box;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
@@ -24,50 +25,43 @@
   #app { flex: 1; width: 100%; border: 0; display: block; background: var(--fondo); }
   .oculto { display: none !important; }
 
-  /* Pantalla de inicio: azul de la iglesia, símbolo en blanco y nombre. Sigue sin corte al inicio que muestra el celular */
+  /* Pantalla de inicio: el logo de la iglesia sobre un fondo suave con sus mismos colores (rosa, crema, lila y menta).
+     Sigue sin corte al inicio que muestra el celular (fondo #f7eef1 en manifest.json) */
   #carga {
-    position: fixed; inset: 0; z-index: 5; overflow: hidden; color: #fff; text-align: center;
+    position: fixed; inset: 0; z-index: 5; overflow: hidden; color: var(--rosa2); text-align: center;
     display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px;
-    background: radial-gradient(120% 80% at 50% 38%, #0f5a80 0%, #0b4d6f 30%, #062a43 72%, #041d2f 100%);
+    background:
+      radial-gradient(60% 45% at 12% 18%, rgba(205, 190, 228, .55) 0%, rgba(205, 190, 228, 0) 70%),
+      radial-gradient(55% 40% at 90% 85%, rgba(190, 228, 214, .55) 0%, rgba(190, 228, 214, 0) 70%),
+      radial-gradient(50% 40% at 92% 12%, rgba(250, 214, 190, .5) 0%, rgba(250, 214, 190, 0) 70%),
+      radial-gradient(120% 90% at 50% 45%, #fffbf8 0%, #fbf3f2 45%, #f3e6ea 100%);
     transition: opacity .55s ease, visibility .55s;
   }
   #carga.oculto { display: flex !important; opacity: 0; visibility: hidden; pointer-events: none; }
-  /* Halo suave detrás del símbolo */
-  #carga::before {
-    content: ""; position: absolute; width: 340px; height: 340px; left: 50%; top: 38%; transform: translate(-50%, -50%);
-    background: radial-gradient(circle, rgba(246, 221, 142, .16) 0%, rgba(246, 221, 142, 0) 65%); pointer-events: none;
-  }
   .ini { position: relative; display: flex; flex-direction: column; align-items: center; }
-  .ini img { width: 148px; height: 148px; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .35)); animation: aparece 1s ease-out both; }
-  .ini small {
-    margin-top: 22px; font-size: 11.5px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: #cfe3ee;
-    animation: sube .9s .25s ease-out both;
-  }
-  .ini h1 {
-    margin: 4px 0 0; font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: 44px; line-height: 1.1; letter-spacing: .5px;
-    animation: sube .9s .4s ease-out both;
-  }
-  .ini .linea { width: 56px; height: 2px; margin: 16px 0 12px; background: #e0b84c; border-radius: 2px; animation: sube .9s .55s ease-out both; }
-  .ini em { font-style: normal; font-size: 13px; color: #d9e8f0; animation: sube .9s .65s ease-out both; }
-  /* Barra de avance fina y dorada al pie */
-  .avance { position: absolute; left: 50%; bottom: calc(48px + env(safe-area-inset-bottom)); width: 120px; height: 3px; margin-left: -60px; border-radius: 3px; background: rgba(255, 255, 255, .14); overflow: hidden; }
-  .avance i { position: absolute; top: 0; bottom: 0; width: 40%; border-radius: 3px; background: #e0b84c; animation: corre 1.3s ease-in-out infinite; }
+  /* El logo tiene fondo blanco: "multiply" lo funde con el fondo de la pantalla */
+  .ini img { width: min(78vw, 360px); height: auto; mix-blend-mode: multiply; animation: aparece 1s ease-out both; }
+  .ini em { margin-top: 14px; font-style: normal; font-size: 13px; letter-spacing: .4px; color: var(--rosa2); animation: sube .9s .45s ease-out both; }
+  /* Barra de avance fina y rosada al pie */
+  .avance { position: absolute; left: 50%; bottom: calc(48px + env(safe-area-inset-bottom)); width: 120px; height: 3px; margin-left: -60px; border-radius: 3px; background: rgba(140, 93, 108, .14); overflow: hidden; }
+  .avance i { position: absolute; top: 0; bottom: 0; width: 40%; border-radius: 3px; background: var(--rosa); animation: corre 1.3s ease-in-out infinite; }
   @keyframes aparece { from { opacity: 0; transform: scale(.88); } to { opacity: 1; transform: none; } }
   @keyframes sube { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @keyframes corre { from { left: -40%; } to { left: 100%; } }
   @media (prefers-reduced-motion: reduce) { #carga *, #carga { animation: none !important; transition: none !important; } }
   #cargaTxt:empty { display: none; }
-  #cargaTxt { margin-top: 18px; font-size: 13.5px; color: #fff; }
-  #lento { margin-top: 12px; font-size: 13px; color: #d9e8f0; max-width: 300px; line-height: 1.45; position: relative; }
+  #cargaTxt { margin-top: 18px; font-size: 13.5px; color: var(--rosa2); font-weight: 600; }
+  #lento { margin-top: 12px; font-size: 13px; color: var(--rosa2); max-width: 300px; line-height: 1.45; position: relative; }
   .boton {
     display: inline-block; border: 0; border-radius: 10px; padding: 10px 16px; font: inherit; font-size: 14px; font-weight: 700;
     background: var(--azul2); color: #fff; text-decoration: none; cursor: pointer;
   }
-  .boton.claro { background: #fff; color: var(--azul); }
+  .boton.claro { background: #fff; color: var(--rosa2); }
+  #carga .boton { background: var(--rosa2); }
 
   /* Aviso para instalar la app (sólo en el navegador, no dentro de la app instalada) */
   #instalar {
-    display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--azul); color: #fff; font-size: 13px; line-height: 1.35;
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--rosa2); color: #fff; font-size: 13px; line-height: 1.35;
   }
   #instalar img { width: 34px; height: 34px; border-radius: 8px; background: #fff; flex: none; }
   #instalar span { flex: 1; min-width: 0; }
@@ -86,10 +80,7 @@
 
   <div id="carga" aria-live="polite">
     <div class="ini">
-      <img src="iconos/simbolo-blanco.png" alt="">
-      <small>Iglesia Metodista Pentecostal</small>
-      <h1>Romeral</h1>
-      <div class="linea" aria-hidden="true"></div>
+      <img src="iconos/logo-inicio.webp" alt="Iglesia Metodista Pentecostal de Chile · Romeral">
       <em>Control de culto y actividades</em>
       <span id="cargaTxt"></span>
       <div id="lento" class="oculto"></div>

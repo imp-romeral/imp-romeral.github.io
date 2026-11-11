@@ -1,7 +1,7 @@
 /* Guarda la portada de la app para que abra rápido. Los datos de la iglesia no se guardan aquí:
    siempre vienen de Apps Script. Al cambiar algún archivo de esta carpeta, sube el número de VERSION. */
-const VERSION = 'romeral-3';
-const ARCHIVOS = ['./', 'index.html', 'manifest.json', 'iconos/simbolo-blanco.png', 'iconos/icono-192.png', 'iconos/icono-512.png', 'iconos/icono-maskable-512.png', 'iconos/apple-touch-icon.png', 'iconos/favicon-48.png'];
+const VERSION = 'romeral-4';
+const ARCHIVOS = ['./', 'index.html', 'manifest.json', 'iconos/logo-inicio.webp', 'iconos/icono-192.png', 'iconos/icono-512.png', 'iconos/icono-maskable-512.png', 'iconos/apple-touch-icon.png', 'iconos/favicon-48.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
