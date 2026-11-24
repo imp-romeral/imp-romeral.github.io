@@ -43,16 +43,19 @@
             mask-image: radial-gradient(52% 50% at 50% 50%, #000 62%, transparent 100%);
   }
   #carga.con-video #intro { animation: introEntra .45s ease-out forwards, introAcerca 4.2s ease-out forwards; }
-  #carga.con-video .ini, #carga.con-video .avance { opacity: 0; transition: opacity .3s; }
+  #carga.con-video .ini { opacity: 0; transition: opacity .3s; }
   @keyframes introEntra { from { opacity: 0; } to { opacity: 1; } }
   @keyframes introAcerca { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.045); } }
   #carga.oculto { display: flex !important; opacity: 0; visibility: hidden; pointer-events: none; }
   .ini { position: relative; display: flex; flex-direction: column; align-items: center; }
   /* El logo tiene fondo blanco: "multiply" lo funde con el fondo de la pantalla */
-  .ini img { width: min(78vw, 360px); height: auto; mix-blend-mode: multiply; animation: aparece 1s ease-out both; }
-  .ini em { margin-top: 14px; font-style: normal; font-size: 13px; letter-spacing: .4px; color: var(--rosa2); animation: sube .9s .45s ease-out both; }
-  /* Barra de avance fina y rosada al pie */
-  .avance { position: absolute; left: 50%; bottom: calc(48px + env(safe-area-inset-bottom)); width: 120px; height: 3px; margin-left: -60px; border-radius: 3px; background: rgba(140, 93, 108, .14); overflow: hidden; }
+  /* El logo sólo aparece si el video no pudo verse (internet lento, sin conexión o "menos movimiento") */
+  .ini img { display: none; width: min(78vw, 360px); height: auto; mix-blend-mode: multiply; animation: aparece 1s ease-out both; }
+  #carga.sin-video .ini img { display: block; }
+  /* Al pie: "Control de culto y actividades" y la barra de avance fina y rosada (se ven también durante el video) */
+  .pie { position: absolute; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 12px; pointer-events: none; }
+  .pie em { font-style: normal; font-size: 13px; letter-spacing: .4px; color: var(--rosa2); animation: sube .9s .2s ease-out both; }
+  .avance { position: relative; width: 120px; height: 3px; border-radius: 3px; background: rgba(140, 93, 108, .14); overflow: hidden; }
   .avance i { position: absolute; top: 0; bottom: 0; width: 40%; border-radius: 3px; background: var(--rosa); animation: corre 1.3s ease-in-out infinite; }
   @keyframes aparece { from { opacity: 0; transform: scale(.88); } to { opacity: 1; transform: none; } }
   @keyframes sube { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -105,11 +108,13 @@
     <video id="intro" playsinline preload="auto" aria-hidden="true"></video>
     <div class="ini">
       <img src="iconos/logo-inicio.webp" alt="Iglesia Metodista Pentecostal de Chile · Romeral">
-      <em>Control de culto y actividades</em>
       <span id="cargaTxt"></span>
       <div id="lento" class="oculto"></div>
     </div>
-    <div class="avance" id="rueda" aria-hidden="true"><i></i></div>
+    <div class="pie">
+      <em>Control de culto y actividades</em>
+      <div class="avance" id="rueda" aria-hidden="true"><i></i></div>
+    </div>
   </div>
 
 <script>
@@ -128,12 +133,14 @@
 
   function abrir() {
     if (!configurado) {
+      carga.classList.add('sin-video');
       $('rueda').classList.add('oculto');
       $('cargaTxt').textContent = 'Falta poner el link de la app.';
       mostrarLento('Escriba el link de Apps Script (termina en /exec) en la línea URL_APP de este archivo.');
       return;
     }
     if (!navigator.onLine) {
+      carga.classList.add('sin-video');
       $('rueda').classList.add('oculto');
       $('cargaTxt').textContent = 'Sin conexión a internet.';
       mostrarLento('<button type="button" class="boton" onclick="location.reload()">Volver a intentar</button>');
@@ -141,28 +148,37 @@
     }
     carga.classList.remove('oculto');
     /* La pantalla de inicio se quita cuando terminó el video Y la app avisó que está lista (o pasaron 4 s).
-       Sin video (no cargó a tiempo o el celular pide "menos movimiento") queda el logo como antes. Tope: 6,5 s. */
+       Sin video (no cargó a tiempo o el celular pide "menos movimiento") aparece el logo. Tope: 7 s. */
     iniciarIntro();
-    setTimeout(() => { INTRO.lista = true; intentarQuitar(); }, 4000);
-    setTimeout(quitarCarga, 6500);
+    setTimeout(() => { INTRO.lista = true; intentarQuitar(); }, 4200);
+    setTimeout(quitarCarga, 7000);
     app.src = URL_APP;
   }
 
   /* ---------- Video de inicio (inicio.mp4, con sonido) ----------
-     Dura ~3 s; se reproduce un poco más lento (DURACION_INTRO) para que calce con la pantalla de inicio.
+     Dura ~3 s; se reproduce más lento para que dure DURACION_INTRO (4 s) y en el último
+     FUNDIDO_INTRO (1 s) el sonido baja de a poco hasta apagarse, sin corte seco.
      El tono del sonido no cambia. Si el celular no deja sonar sin un toque (iPhone, algunos Android),
      se ve igual pero en silencio. */
-  const DURACION_INTRO = 3.8;
+  const DURACION_INTRO = 4;
+  const FUNDIDO_INTRO = 1;
   const INTRO = {lista: false, fin: false};
   function intentarQuitar() { if (INTRO.fin && INTRO.lista) quitarCarga(); }
-  function sinVideo() { if (!INTRO.fin) { INTRO.fin = true; intentarQuitar(); } }
+  function sinVideo() { if (!INTRO.fin) { INTRO.fin = true; carga.classList.add('sin-video'); intentarQuitar(); } }
+  function bajarSonidoIntro(v) {
+    if (v.ended || INTRO.fin) { v.volume = 0; return; }
+    const resta = (v.duration - v.currentTime) / (v.playbackRate || 1);   // segundos reales que faltan
+    const x = Math.max(0, Math.min(1, resta / FUNDIDO_INTRO));
+    try { v.volume = x * x; } catch (e) {}                                  // curva suave al oído
+    requestAnimationFrame(() => bajarSonidoIntro(v));
+  }
   function iniciarIntro() {
     const v = $('intro');
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { sinVideo(); return; }
     let empezo = false;
-    // Si en 1,5 s no empezó (internet lento), se queda el logo de siempre
+    // Si en 1,5 s no empezó (internet lento), aparece el logo en su lugar
     setTimeout(() => { if (!empezo) { v.removeAttribute('src'); sinVideo(); } }, 1500);
-    v.addEventListener('playing', () => { empezo = true; carga.classList.add('con-video'); }, {once: true});
+    v.addEventListener('playing', () => { empezo = true; carga.classList.add('con-video'); bajarSonidoIntro(v); }, {once: true});
     v.addEventListener('ended', () => { INTRO.fin = true; intentarQuitar(); });
     v.addEventListener('error', sinVideo);
     // Se baja completo (no por partes): así queda guardado y la próxima vez abre al instante, aun sin internet
@@ -170,7 +186,7 @@
       if (INTRO.fin) return;
       v.src = URL.createObjectURL(b);
       v.addEventListener('loadedmetadata', () => {
-        const rate = v.duration > 0 ? Math.min(1, Math.max(.6, v.duration / DURACION_INTRO)) : 1;
+        const rate = v.duration > 0 ? Math.min(1, Math.max(.5, v.duration / DURACION_INTRO)) : 1;
         v.defaultPlaybackRate = rate; v.playbackRate = rate;
         try { v.preservesPitch = true; v.webkitPreservesPitch = true; } catch (x) {}
         v.muted = false;
