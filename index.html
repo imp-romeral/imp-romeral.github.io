@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>IMP Romeral</title>
 <meta name="description" content="Control de culto y actividades · Iglesia Metodista Pentecostal Romeral">
-<meta name="theme-color" content="#f7eef1">
+<meta name="theme-color" content="#e9e5dd">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="iconos/favicon-48.png">
 <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
@@ -15,7 +15,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
   /* Colores del logo: rosa, crema, lila y menta */
-  :root { --azul: #062a43; --azul2: #0b4d6f; --fondo: #f3f3f1; --texto: #1c2630; --rosa: #b98393; --rosa2: #8c5d6c; --crema: #f7eef1; }
+  /* Desde el 24 de noviembre: fondo color papel, igual al del video de inicio (inicio.mp4) */
+  :root { --azul: #062a43; --azul2: #0b4d6f; --fondo: #f3f3f1; --texto: #1c2630; --rosa: #c06a86; --rosa2: #9a4f6b; --crema: #e9e5dd; }
   html, body { margin: 0; height: 100%; background: var(--crema); }
   body {
     display: flex; flex-direction: column; box-sizing: border-box;
@@ -30,13 +31,21 @@
   #carga {
     position: fixed; inset: 0; z-index: 5; overflow: hidden; color: var(--rosa2); text-align: center;
     display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px;
-    background:
-      radial-gradient(60% 45% at 12% 18%, rgba(205, 190, 228, .55) 0%, rgba(205, 190, 228, 0) 70%),
-      radial-gradient(55% 40% at 90% 85%, rgba(190, 228, 214, .55) 0%, rgba(190, 228, 214, 0) 70%),
-      radial-gradient(50% 40% at 92% 12%, rgba(250, 214, 190, .5) 0%, rgba(250, 214, 190, 0) 70%),
-      radial-gradient(120% 90% at 50% 45%, #fffbf8 0%, #fbf3f2 45%, #f3e6ea 100%);
-    transition: opacity .55s ease, visibility .55s;
+    /* Papel claro al centro y algo más oscuro en las orillas, como el video */
+    background: radial-gradient(90% 70% at 50% 46%, #f0ede7 0%, #e9e5dd 55%, #dcd7ce 100%);
+    transition: opacity .7s ease, visibility .7s;
   }
+  /* Video de inicio: se funde con el fondo (orillas difuminadas), entra suave y se acerca apenas mientras dura */
+  #intro {
+    position: absolute; left: 50%; top: 46%; width: min(126vw, 640px); height: auto; transform: translate(-50%, -50%);
+    opacity: 0; pointer-events: none;
+    -webkit-mask-image: radial-gradient(52% 50% at 50% 50%, #000 62%, transparent 100%);
+            mask-image: radial-gradient(52% 50% at 50% 50%, #000 62%, transparent 100%);
+  }
+  #carga.con-video #intro { animation: introEntra .45s ease-out forwards, introAcerca 4.2s ease-out forwards; }
+  #carga.con-video .ini, #carga.con-video .avance { opacity: 0; transition: opacity .3s; }
+  @keyframes introEntra { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes introAcerca { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.045); } }
   #carga.oculto { display: flex !important; opacity: 0; visibility: hidden; pointer-events: none; }
   .ini { position: relative; display: flex; flex-direction: column; align-items: center; }
   /* El logo tiene fondo blanco: "multiply" lo funde con el fondo de la pantalla */
@@ -93,6 +102,7 @@
   <iframe id="app" title="Iglesia Metodista Pentecostal Romeral" allow="clipboard-write; fullscreen"></iframe>
 
   <div id="carga" aria-live="polite">
+    <video id="intro" playsinline preload="auto" aria-hidden="true"></video>
     <div class="ini">
       <img src="iconos/logo-inicio.webp" alt="Iglesia Metodista Pentecostal de Chile · Romeral">
       <em>Control de culto y actividades</em>
@@ -114,7 +124,7 @@
   const configurado = /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec/.test(URL_APP);
 
   function mostrarLento(html) { $('lento').innerHTML = html; $('lento').classList.remove('oculto'); }
-  function quitarCarga() { carga.classList.add('oculto'); }
+  function quitarCarga() { carga.classList.add('oculto'); const v = $('intro'); setTimeout(() => { try { v.pause(); } catch (x) {} }, 800); }
 
   function abrir() {
     if (!configurado) {
@@ -130,16 +140,50 @@
       return;
     }
     carga.classList.remove('oculto');
-    // La pantalla de inicio se quita cuando la app avisa que terminó de cargar, o a los 4 segundos como máximo
-    setTimeout(quitarCarga, 4000);
+    /* La pantalla de inicio se quita cuando terminó el video Y la app avisó que está lista (o pasaron 4 s).
+       Sin video (no cargó a tiempo o el celular pide "menos movimiento") queda el logo como antes. Tope: 6,5 s. */
+    iniciarIntro();
+    setTimeout(() => { INTRO.lista = true; intentarQuitar(); }, 4000);
+    setTimeout(quitarCarga, 6500);
     app.src = URL_APP;
+  }
+
+  /* ---------- Video de inicio (inicio.mp4, con sonido) ----------
+     Dura ~3 s; se reproduce un poco más lento (DURACION_INTRO) para que calce con la pantalla de inicio.
+     El tono del sonido no cambia. Si el celular no deja sonar sin un toque (iPhone, algunos Android),
+     se ve igual pero en silencio. */
+  const DURACION_INTRO = 3.8;
+  const INTRO = {lista: false, fin: false};
+  function intentarQuitar() { if (INTRO.fin && INTRO.lista) quitarCarga(); }
+  function sinVideo() { if (!INTRO.fin) { INTRO.fin = true; intentarQuitar(); } }
+  function iniciarIntro() {
+    const v = $('intro');
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { sinVideo(); return; }
+    let empezo = false;
+    // Si en 1,5 s no empezó (internet lento), se queda el logo de siempre
+    setTimeout(() => { if (!empezo) { v.removeAttribute('src'); sinVideo(); } }, 1500);
+    v.addEventListener('playing', () => { empezo = true; carga.classList.add('con-video'); }, {once: true});
+    v.addEventListener('ended', () => { INTRO.fin = true; intentarQuitar(); });
+    v.addEventListener('error', sinVideo);
+    // Se baja completo (no por partes): así queda guardado y la próxima vez abre al instante, aun sin internet
+    fetch('inicio.mp4').then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(b => {
+      if (INTRO.fin) return;
+      v.src = URL.createObjectURL(b);
+      v.addEventListener('loadedmetadata', () => {
+        const rate = v.duration > 0 ? Math.min(1, Math.max(.6, v.duration / DURACION_INTRO)) : 1;
+        v.defaultPlaybackRate = rate; v.playbackRate = rate;
+        try { v.preservesPitch = true; v.webkitPreservesPitch = true; } catch (x) {}
+        v.muted = false;
+        v.play().catch(() => { v.muted = true; return v.play(); }).catch(sinVideo);
+      }, {once: true});
+    }).catch(sinVideo);
   }
   window.addEventListener('online', () => { if (!app.src) location.reload(); });
   // Aviso de la app (App.html): sólo se acepta desde las páginas de Apps Script
   window.addEventListener('message', e => {
     let origen = '';
     try { origen = new URL(e.origin).hostname; } catch (x) {}
-    if (e.data === 'romeral-lista' && /\.googleusercontent\.com$/.test(origen)) quitarCarga();
+    if (e.data === 'romeral-lista' && /\.googleusercontent\.com$/.test(origen)) { INTRO.lista = true; intentarQuitar(); }
   });
 
   /* Aviso para instalar: Android muestra el botón Instalar; iPhone necesita el menú Compartir de Safari */
