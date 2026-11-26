@@ -189,7 +189,10 @@
         const rate = v.duration > 0 ? Math.min(1, Math.max(.5, v.duration / DURACION_INTRO)) : 1;
         v.defaultPlaybackRate = rate; v.playbackRate = rate;
         try { v.preservesPitch = true; v.webkitPreservesPitch = true; } catch (x) {}
-        v.muted = false;
+        // Configuración de la app → "Sonido del video de inicio" (lo guarda el mensaje 'romeral-conf')
+        let conSonido = true;
+        try { conSonido = localStorage.getItem('romeral_sonido') !== '0'; } catch (x) {}
+        v.muted = !conSonido;
         v.play().catch(() => { v.muted = true; return v.play(); }).catch(sinVideo);
       }, {once: true});
     }).catch(sinVideo);
@@ -200,6 +203,10 @@
     let origen = '';
     try { origen = new URL(e.origin).hostname; } catch (x) {}
     if (e.data === 'romeral-lista' && /\.googleusercontent\.com$/.test(origen)) { INTRO.lista = true; intentarQuitar(); }
+    // Configuración de la app: si el video de inicio suena o no (se usa la próxima vez que se abra)
+    if (e.data && e.data.tipo === 'romeral-conf' && /\.googleusercontent\.com$/.test(origen)) {
+      try { localStorage.setItem('romeral_sonido', e.data.sonido === false ? '0' : '1'); } catch (x) {}
+    }
   });
 
   /* Aviso para instalar: Android muestra el botón Instalar; iPhone necesita el menú Compartir de Safari */
