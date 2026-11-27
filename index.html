@@ -46,6 +46,10 @@
   #carga.con-video .ini { opacity: 0; transition: opacity .3s; }
   @keyframes introEntra { from { opacity: 0; } to { opacity: 1; } }
   @keyframes introAcerca { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.045); } }
+  /* Navidad: papel un poco más cálido (como el video navideño), texto rojo y barrita verde */
+  #carga.navidad { background: radial-gradient(90% 70% at 50% 46%, #f8f4ea 0%, #ede7dd 55%, #e1d9cc 100%); }
+  #carga.navidad .pie em { color: #8e1c2d; }
+  #carga.navidad .avance i { background: #2f6b4a; }
   #carga.oculto { display: flex !important; opacity: 0; visibility: hidden; pointer-events: none; }
   .ini { position: relative; display: flex; flex-direction: column; align-items: center; }
   /* El logo tiene fondo blanco: "multiply" lo funde con el fondo de la pantalla */
@@ -160,14 +164,28 @@
      FUNDIDO_INTRO (1 s) el sonido baja de a poco hasta apagarse, sin corte seco.
      El tono del sonido no cambia. Si el celular no deja sonar sin un toque (iPhone, algunos Android),
      se ve igual pero en silencio. */
-  const DURACION_INTRO = 4;
   const FUNDIDO_INTRO = 1;
   const INTRO = {lista: false, fin: false};
+  /* Navidad (1 de diciembre 00:00 al 26 de diciembre 00:00): video navideño (inicio-navidad.mp4, 9 s).
+     Se usa el tramo de 0,45 s a 6,3 s (hasta que el logo queda armado), un poco más rápido para que dure 4,5 s.
+     Si en Configuración eligieron "Sin adornos", sale el video de siempre. */
+  const NAVIDAD = (() => {
+    const d = new Date(), y = d.getFullYear();
+    let adornos = 'si';
+    try { adornos = localStorage.getItem('romeral_adornos') || 'si'; } catch (x) {}
+    try { if (localStorage.getItem('romeral_tmp_prueba') === 'navidad') return true; } catch (x) {}   // sólo para probar
+    return adornos !== 'no' && d >= new Date(y, 11, 1, 0, 0) && d < new Date(y, 11, 26, 0, 0);
+  })();
+  const DURACION_INTRO = NAVIDAD ? 4.5 : 4;
+  const TRAMO = NAVIDAD ? {ini: .45, fin: 6.3} : {ini: 0, fin: 0};
+  if (NAVIDAD) carga.classList.add('navidad');
   function intentarQuitar() { if (INTRO.fin && INTRO.lista) quitarCarga(); }
   function sinVideo() { if (!INTRO.fin) { INTRO.fin = true; carga.classList.add('sin-video'); intentarQuitar(); } }
   function bajarSonidoIntro(v) {
     if (v.ended || INTRO.fin) { v.volume = 0; return; }
-    const resta = (v.duration - v.currentTime) / (v.playbackRate || 1);   // segundos reales que faltan
+    const fin = TRAMO.fin || v.duration;
+    if (TRAMO.fin && v.currentTime >= fin) { v.volume = 0; v.pause(); INTRO.fin = true; intentarQuitar(); return; }
+    const resta = (fin - v.currentTime) / (v.playbackRate || 1);          // segundos reales que faltan
     const x = Math.max(0, Math.min(1, resta / FUNDIDO_INTRO));
     try { v.volume = x * x; } catch (e) {}                                  // curva suave al oído
     requestAnimationFrame(() => bajarSonidoIntro(v));
@@ -177,17 +195,20 @@
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { sinVideo(); return; }
     let empezo = false;
     // Si en 1,5 s no empezó (internet lento), aparece el logo en su lugar
-    setTimeout(() => { if (!empezo) { v.removeAttribute('src'); sinVideo(); } }, 1500);
+    setTimeout(() => { if (!empezo) { v.removeAttribute('src'); sinVideo(); } }, NAVIDAD ? 2500 : 1500);
     v.addEventListener('playing', () => { empezo = true; carga.classList.add('con-video'); bajarSonidoIntro(v); }, {once: true});
     v.addEventListener('ended', () => { INTRO.fin = true; intentarQuitar(); });
     v.addEventListener('error', sinVideo);
     // Se baja completo (no por partes): así queda guardado y la próxima vez abre al instante, aun sin internet
-    fetch('inicio.mp4').then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(b => {
+    fetch(NAVIDAD ? 'inicio-navidad.mp4' : 'inicio.mp4').then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(b => {
       if (INTRO.fin) return;
       v.src = URL.createObjectURL(b);
       v.addEventListener('loadedmetadata', () => {
-        const rate = v.duration > 0 ? Math.min(1, Math.max(.5, v.duration / DURACION_INTRO)) : 1;
+        if (TRAMO.fin > v.duration) TRAMO.fin = v.duration;
+        const largo = (TRAMO.fin || v.duration) - TRAMO.ini;
+        const rate = largo > 0 ? Math.min(1.6, Math.max(.5, largo / DURACION_INTRO)) : 1;
         v.defaultPlaybackRate = rate; v.playbackRate = rate;
+        if (TRAMO.ini) { try { v.currentTime = TRAMO.ini; } catch (x) {} }
         try { v.preservesPitch = true; v.webkitPreservesPitch = true; } catch (x) {}
         // Configuración de la app → "Sonido del video de inicio" (lo guarda el mensaje 'romeral-conf')
         let conSonido = true;
@@ -206,6 +227,7 @@
     // Configuración de la app: si el video de inicio suena o no (se usa la próxima vez que se abra)
     if (e.data && e.data.tipo === 'romeral-conf' && /\.googleusercontent\.com$/.test(origen)) {
       try { localStorage.setItem('romeral_sonido', e.data.sonido === false ? '0' : '1'); } catch (x) {}
+      try { if (e.data.adornos) localStorage.setItem('romeral_adornos', String(e.data.adornos)); } catch (x) {}
     }
   });
 
